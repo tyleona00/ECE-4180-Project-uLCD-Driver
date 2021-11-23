@@ -1,7 +1,12 @@
 // This driver is modified from the 4DGL-uLCD-SE library by Stephane Rochon
 
-#include "mbed.h"
-#include "uLCD_4DGL.h"
+#include <uLCD_4DGL.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <termios.h>
 
 #define ARRAY_SIZE(X) sizeof(X)/sizeof(X[0])
 
@@ -9,21 +14,51 @@
 
 
 //******************************************************************************************************
-uLCD_4DGL :: uLCD_4DGL(PinName tx, PinName rx, PinName rst) : _cmd(tx, rx),
-    _rst(rst)
-#if DEBUGMODE
-    ,pc(USBTX, USBRX)
-#endif // DEBUGMODE
+uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
 {
     // Constructor
-    _cmd.baud(9600);
-#if DEBUGMODE
-    pc.baud(115200);
+    if (gpioInitialise() < 0) exit(1); // init I/O library
 
-    pc.printf("\n\n\n");
-    pc.printf("*********************\n");
-    pc.printf("uLCD_4DGL CONSTRUCTOR\n");
-    pc.printf("*********************\n");
+    signal(SIGQUIT, err_handler);// CTL C and STOP button
+    signal(SIGINT, err_handler); // GPIO exit & cleanup
+    signal(SIGTERM, err_handler);
+    signal(SIGABRT, err_handler);
+    atexit(exit_handler);  // exit handler cleanup 
+
+    //IO
+    gpioSetMode(_rst, PI_OUTPUT);
+
+    // mini UART
+    _fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
+    //open mbed's USB virtual com port
+    if (fd == -1) {
+        perror("open_port: Unable to open /dev/ttyACM0 - ");
+        gpioTerminate(); //release GPIO locks & resources
+        signal(SIGINT, SIG_DFL); //exit program
+        kill(getppid(), SIGINT); //kill it off
+        kill(getpid(), SIGINT);
+        exit(1);
+    }
+
+    fcntl(fd, F_SETFL, FNDELAY);   //Turn off blocking for reads
+    //Linux Raw serial setup options
+    tcgetattr(fd, &_options);   //Get current serial settings in structure
+    cfsetspeed(&_options, B9600);   //Change a only few
+    _options.c_cflag &= ~CSTOPB;
+    _options.c_cflag |= CLOCAL;
+    _options.c_cflag |= CREAD;
+    cfmakeraw(&_options);
+    tcsetattr(fd, TCSANOW, &_options);    //Set serial to new settings
+    time_sleep(1);
+    // 
+
+#if DEBUGMODE
+    // pc.baud(115200);
+
+    printf("\n\n\n");
+    printf("*********************\n");
+    printf("uLCD_4DGL CONSTRUCTOR\n");
+    printf("*********************\n");
 #endif
 
     _rst = 1;    // put RESET pin to high to start TFT screen
@@ -43,8 +78,8 @@ uLCD_4DGL :: uLCD_4DGL(PinName tx, PinName rx, PinName rst) : _cmd(tx, rx),
 void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 {
 
-    _cmd.putc(c);
-    wait_us(500);  //mbed is too fast for LCD at high baud rates in some long commands
+    write(fd, c, 1);
+    usleep(500);  //mbed is too fast for LCD at high baud rates in some long commands
 
 #if DEBUGMODE
     pc.printf("   Char sent : 0x%02X\n",c);
@@ -56,8 +91,7 @@ void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 {
 
-    _cmd.putc(c);
-    //wait_ms(0.0);  //mbed is too fast for LCD at high baud rates - but not in short commands
+    write(fd, c, 1);
 
 #if DEBUGMODE
     pc.printf("   Char sent : 0x%02X\n",c);
@@ -68,7 +102,7 @@ void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 void uLCD_4DGL :: freeBUFFER(void)         // Clear serial buffer before writing command
 {
 
-    while (_cmd.readable()) _cmd.getc();  // clear buffer garbage
+    while (read(fd, &_read_buf, 1) != 0) {}  // clear buffer garbage
 }
 
 //******************************************************************************************************
@@ -88,8 +122,8 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
         else
             writeBYTE(command[i]); // send command to serial port but slower
     }
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) resp = _cmd.getc();           // read response if any
+    while (read(fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
             resp =  1;
@@ -111,11 +145,11 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
 //**************************************************************************
 void uLCD_4DGL :: reset()    // Reset Screen
 {
-    wait_ms(5);
+    usleep(5000);
     _rst = 0;               // put RESET pin to low
-    wait_ms(5);         // wait a few milliseconds for command reception
+    usleep(5000);         // wait a few milliseconds for command reception
     _rst = 1;               // put RESET back to high
-    wait(3);                // wait 3s for screen to restart
+    sleep(3);                // wait 3s for screen to restart
 
     freeBUFFER();           // clean buffer from possible garbage
 }
@@ -136,8 +170,8 @@ int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several B
         else
             writeBYTE(command[i]); // send command to serial port with delay
     }
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) resp = _cmd.getc();           // read response if any
+    while (read(fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
             resp =  1;
@@ -275,17 +309,17 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
     freeBUFFER();
     command[1] = char(newbaud >>8);
     command[2] = char(newbaud % 256);
-    wait_ms(1);
+    usleep(1000);
     for (i = 0; i <3; i++) writeBYTEfast(command[i]);      // send command to serial port
-    for (i = 0; i<10; i++) wait_ms(1); 
+    for (i = 0; i<10; i++) usleep(1000); 
     //dont change baud until all characters get sent out
     _cmd.baud(speed);                                  // set mbed to same speed
     i=0;
-    while ((!_cmd.readable()) && (i<25000)) {
-        wait_ms(TEMPO);           // wait for screen answer - comes 100ms after change
+    while ((read(fd, &_read_buf, 1) == 0)) && (i<25000)) {
+        usleep(TEMPO);           // wait for screen answer - comes 100ms after change
         i++; //timeout if ack character missed by baud change
     }
-    if (_cmd.readable()) resp = _cmd.getc();           // read response if any
+    if (i < 25000) resp = _read_buf;          // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
             resp =  1;
@@ -310,7 +344,7 @@ int uLCD_4DGL :: readVERSION(char *command, int number)   // read screen info an
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (!_cmd.readable()) wait_ms(TEMPO);               // wait for screen answer
+    while (!_cmd.readable()) usleep(TEMPO);               // wait for screen answer
 
     while (_cmd.readable() && resp < ARRAY_SIZE(response)) {
         temp = _cmd.getc();
@@ -428,7 +462,7 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (!_cmd.readable()) wait_ms(TEMPO);    // wait for screen answer
+    while (!_cmd.readable()) usleep(TEMPO);    // wait for screen answer
 
     while (_cmd.readable() && resp < ARRAY_SIZE(response)) {
         temp = _cmd.getc();
@@ -449,4 +483,26 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 
     return resp;
 }
+
+// Called when CTL C or STOP button hit
+void uLCD_4DGL :: err_handler(int sig) {
+    gpioTerminate(); //release GPIO locks & resources
+    if (fd != -1) {
+        tcdrain(fd);
+        close(fd);
+    }
+    signal(SIGINT, SIG_DFL); //exit program
+    kill(getppid(), SIGINT); //kill it off
+    kill(getpid(), SIGINT);
+    exit(0);
+}
+
+void uLCD_4DGL :: exit_handler(void) {
+    gpioTerminate(); //release GPIO locks & resources on exit
+    if (fd != -1) {
+        tcdrain(fd);
+        close(fd);
+    }
+}
+
 

@@ -1,6 +1,5 @@
 // This driver is modified from the 4DGL-uLCD-SE by Stephane Rochon
 
-#include "mbed.h"
 #ifndef _uLCD
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
@@ -292,8 +291,9 @@ public :
 
 protected :
 
-    Serial     _cmd;
-    DigitalOut _rst;
+    int _fd = -1;   // serial port number
+    int _rst;   // reset gpio pin number
+    struct termios _options;
     //used by printf
     virtual int _putc(int c) {
         putc(c);
@@ -311,9 +311,12 @@ protected :
     int  readVERSION (char *, int);
     int  getSTATUS   (char *, int);
     int  version     (void);
-#if DEBUGMODE
-    Serial pc;
-#endif // DEBUGMODE
+
+    void err_handler(int);
+    void exit_handler(void);
+// #if DEBUGMODE
+   //  Serial pc;
+// #endif // DEBUGMODE
 };
 
 typedef unsigned char BYTE;
