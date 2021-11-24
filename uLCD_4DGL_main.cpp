@@ -1,12 +1,15 @@
 // This driver is modified from the 4DGL-uLCD-SE library by Stephane Rochon
 
-#include <uLCD_4DGL.h>
+#include "uLCD_4DGL.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <termios.h>
+#include <pigpio.h> // include GPIO library
+#include <signal.h> // needed to clean up CTL C abort
+#include <stdlib.h>
 
 #define ARRAY_SIZE(X) sizeof(X)/sizeof(X[0])
 
@@ -31,8 +34,8 @@ uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
     // mini UART
     _fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
     //open mbed's USB virtual com port
-    if (fd == -1) {
-        perror("open_port: Unable to open /dev/ttyACM0 - ");
+    if (_fd == -1) {
+        perror("open_port: Unable to open /dev/ttyS0 - ");
         gpioTerminate(); //release GPIO locks & resources
         signal(SIGINT, SIG_DFL); //exit program
         kill(getppid(), SIGINT); //kill it off
@@ -40,15 +43,15 @@ uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
         exit(1);
     }
 
-    fcntl(fd, F_SETFL, FNDELAY);   //Turn off blocking for reads
+    fcntl(_fd, F_SETFL, FNDELAY);   //Turn off blocking for reads
     //Linux Raw serial setup options
-    tcgetattr(fd, &_options);   //Get current serial settings in structure
+    tcgetattr(_fd, &_options);   //Get current serial settings in structure
     cfsetspeed(&_options, B9600);   //Change a only few
     _options.c_cflag &= ~CSTOPB;
     _options.c_cflag |= CLOCAL;
     _options.c_cflag |= CREAD;
     cfmakeraw(&_options);
-    tcsetattr(fd, TCSANOW, &_options);    //Set serial to new settings
+    tcsetattr(_fd, TCSANOW, &_options);    //Set serial to new settings
     time_sleep(1);
     // 
 
@@ -78,7 +81,7 @@ uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
 void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 {
 
-    write(fd, c, 1);
+    write(_fd, (char *) c, 1);
     usleep(500);  //mbed is too fast for LCD at high baud rates in some long commands
 
 #if DEBUGMODE
@@ -91,7 +94,7 @@ void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 {
 
-    write(fd, c, 1);
+    write(_fd, c, 1);
 
 #if DEBUGMODE
     pc.printf("   Char sent : 0x%02X\n",c);
@@ -102,7 +105,7 @@ void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 void uLCD_4DGL :: freeBUFFER(void)         // Clear serial buffer before writing command
 {
 
-    while (read(fd, &_read_buf, 1) != 0) {}  // clear buffer garbage
+    while (read(_fd, &_read_buf, 1) != 0) {}  // clear buffer garbage
 }
 
 //******************************************************************************************************
@@ -122,7 +125,7 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
         else
             writeBYTE(command[i]); // send command to serial port but slower
     }
-    while (read(fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -170,7 +173,7 @@ int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several B
         else
             writeBYTE(command[i]); // send command to serial port with delay
     }
-    while (read(fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -222,85 +225,47 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
     command[0] = BAUDRATE;
     command[1] = 0;
     int newbaud = BAUD_9600;
+    speed_t newspeed = B9600;
     switch (speed) {
         case  110 :
             newbaud = BAUD_110;
+            newspeed = B110;
             break;
         case  300 :
             newbaud = BAUD_300;
+            newspeed = B300;
             break;
         case  600 :
             newbaud = BAUD_600;
+            newspeed = B600;
             break;
         case 1200 :
             newbaud = BAUD_1200;
+            newspeed = B1200;
             break;
         case 2400 :
             newbaud = BAUD_2400;
+            newspeed = B2400;
             break;
         case 4800 :
             newbaud = BAUD_4800;
+            newspeed = B4800;
             break;
         case 9600 :
             newbaud = BAUD_9600;
-            break;
-        case 14400 :
-            newbaud = BAUD_14400;
+            newspeed = B9600;
             break;
         case 19200 :
             newbaud = BAUD_19200;
-            break;
-        case 31250 :
-            newbaud = BAUD_31250;
+            newspeed = B19200;
             break;
         case 38400 :
             newbaud = BAUD_38400;
-            break;
-        case 56000 :
-            newbaud = BAUD_56000;
-            break;
-        case 57600 :
-            newbaud = BAUD_57600;
-            break;
-        case 115200 :
-            newbaud = BAUD_115200;
-            break;
-        case 128000 :
-            newbaud = BAUD_128000;
-            break;
-        case 256000 :
-            newbaud = BAUD_256000;
-            break;
-        case 300000 :
-            newbaud = BAUD_300000;
-            speed = 272727;
-            break;
-        case 375000 :
-            newbaud = BAUD_375000;
-            speed = 333333;
-            break;
-        case 500000 :
-            newbaud = BAUD_500000;
-            speed = 428571;
-            break;
-        case 600000 :
-            newbaud = BAUD_600000;
-            break;
-        case 750000 : //rates over 600000 are not documented, but seem to work
-            newbaud = BAUD_750000;
-            break;
-        case 1000000 :  
-            newbaud = BAUD_1000000;
-            break;
-        case 1500000 :
-            newbaud = BAUD_1500000;
-            break;
-        case 3000000 :
-            newbaud = BAUD_3000000;
+            newspeed = B38400;
             break;
         default   :
             newbaud = BAUD_9600;
-            speed = 9600;
+            newspeed = B9600;
             break;
     }
 
@@ -313,9 +278,13 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
     for (i = 0; i <3; i++) writeBYTEfast(command[i]);      // send command to serial port
     for (i = 0; i<10; i++) usleep(1000); 
     //dont change baud until all characters get sent out
-    _cmd.baud(speed);                                  // set mbed to same speed
+    tcgetattr(_fd, &_options);   //Get current serial settings in structure
+    cfsetspeed(&_options, newspeed);
+    tcsetattr(_fd,TCSANOW, &_options);    //Set serial to new settings
+    sleep(1);
+    
     i=0;
-    while ((read(fd, &_read_buf, 1) == 0)) && (i<25000)) {
+    while ((read(_fd, &_read_buf, 1) == 0) && (i<25000)) {
         usleep(TEMPO);           // wait for screen answer - comes 100ms after change
         i++; //timeout if ack character missed by baud change
     }
@@ -344,12 +313,13 @@ int uLCD_4DGL :: readVERSION(char *command, int number)   // read screen info an
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (!_cmd.readable()) usleep(TEMPO);               // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
 
-    while (_cmd.readable() && resp < ARRAY_SIZE(response)) {
-        temp = _cmd.getc();
+    do {
+        temp = _read_buf;
         response[resp++] = (char)temp;
-    }
+    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
+
     switch (resp) {
         case 2 :                                           // if OK populate data and return 1
             revision  = response[0]<<8 + response[1];
@@ -462,12 +432,13 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (!_cmd.readable()) usleep(TEMPO);    // wait for screen answer
-
-    while (_cmd.readable() && resp < ARRAY_SIZE(response)) {
-        temp = _cmd.getc();
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
+    
+    do {
+        temp = _read_buf;
         response[resp++] = (char)temp;
-    }
+    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
+    
     switch (resp) {
         case 4 :
             resp = (int)response[1];         // if OK populate data
@@ -487,9 +458,9 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 // Called when CTL C or STOP button hit
 void uLCD_4DGL :: err_handler(int sig) {
     gpioTerminate(); //release GPIO locks & resources
-    if (fd != -1) {
-        tcdrain(fd);
-        close(fd);
+    if (_fd != -1) {
+        tcdrain(_fd);
+        close(_fd);
     }
     signal(SIGINT, SIG_DFL); //exit program
     kill(getppid(), SIGINT); //kill it off
@@ -499,9 +470,9 @@ void uLCD_4DGL :: err_handler(int sig) {
 
 void uLCD_4DGL :: exit_handler(void) {
     gpioTerminate(); //release GPIO locks & resources on exit
-    if (fd != -1) {
-        tcdrain(fd);
-        close(fd);
+    if (_fd != -1) {
+        tcdrain(_fd);
+        close(_fd);
     }
 }
 

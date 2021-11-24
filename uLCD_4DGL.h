@@ -1,5 +1,7 @@
 // This driver is modified from the 4DGL-uLCD-SE by Stephane Rochon
 
+#include <termios.h>
+
 #ifndef _uLCD
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
@@ -177,12 +179,12 @@ Example:
 * @endcode
 */
 
-class uLCD_4DGL : public Stream
+class uLCD_4DGL
 {
 
 public :
 
-    uLCD_4DGL(PinName tx, PinName rx, PinName rst);
+    uLCD_4DGL(int tx, int rx, int rst);
 
 // General Commands *******************************************************************************
 
@@ -291,8 +293,9 @@ public :
 
 protected :
 
-    int _fd = -1;   // serial port number
+    static int _fd;   // serial port number
     int _rst;   // reset gpio pin number
+    char _read_buf;
     struct termios _options;
     //used by printf
     virtual int _putc(int c) {
@@ -312,8 +315,8 @@ protected :
     int  getSTATUS   (char *, int);
     int  version     (void);
 
-    void err_handler(int);
-    void exit_handler(void);
+    static void err_handler(int);
+    static void exit_handler(void);
 // #if DEBUGMODE
    //  Serial pc;
 // #endif // DEBUGMODE
