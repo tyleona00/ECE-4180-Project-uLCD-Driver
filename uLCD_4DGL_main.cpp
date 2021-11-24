@@ -17,7 +17,7 @@
 
 
 //******************************************************************************************************
-uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
+uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
 {
     // Constructor
     if (gpioInitialise() < 0) exit(1); // init I/O library
@@ -64,7 +64,7 @@ uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
     printf("*********************\n");
 #endif
 
-    _rst = 1;    // put RESET pin to high to start TFT screen
+    gpioWrite(_rst, PI_ON);    // put RESET pin to high to start TFT screen
     reset();
     cls();       // clear screen
     current_col         = 0;            // initial cursor col
@@ -80,8 +80,8 @@ uLCD_4DGL :: uLCD_4DGL(int tx, int rx, int rst) : _rst(rst)
 //******************************************************************************************************
 void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 {
-
-    write(_fd, (char *) c, 1);
+    char* a = &c;
+    write(_fd, a, 1);
     usleep(500);  //mbed is too fast for LCD at high baud rates in some long commands
 
 #if DEBUGMODE
@@ -93,8 +93,8 @@ void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
 //******************************************************************************************************
 void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 {
-
-    write(_fd, c, 1);
+    char* a = &c;
+    write(_fd, a, 1);
 
 #if DEBUGMODE
     pc.printf("   Char sent : 0x%02X\n",c);
@@ -149,9 +149,9 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
 void uLCD_4DGL :: reset()    // Reset Screen
 {
     usleep(5000);
-    _rst = 0;               // put RESET pin to low
+    gpioWrite(_rst, PI_OFF);              // put RESET pin to low
     usleep(5000);         // wait a few milliseconds for command reception
-    _rst = 1;               // put RESET back to high
+    gpioWrite(_rst, PI_ON);                // put RESET back to high
     sleep(3);                // wait 3s for screen to restart
 
     freeBUFFER();           // clean buffer from possible garbage

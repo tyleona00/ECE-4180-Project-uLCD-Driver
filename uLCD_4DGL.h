@@ -184,7 +184,7 @@ class uLCD_4DGL
 
 public :
 
-    uLCD_4DGL(int tx, int rx, int rst);
+    uLCD_4DGL(int rst);
 
 // General Commands *******************************************************************************
 
