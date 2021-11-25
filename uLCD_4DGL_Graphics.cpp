@@ -17,8 +17,9 @@
 // You should have received a copy of the GNU General Public License
 // along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "mbed.h"
 #include "uLCD_4DGL.h"
+#include <stdio.h>
+#include <unistd.h>
 
 #define ARRAY_SIZE(X) sizeof(X)/sizeof(X[0])
 
@@ -233,7 +234,7 @@ void uLCD_4DGL :: BLIT(int x, int y, int w, int h, int *colors)     // draw a bl
     writeBYTE(w & 0xFF);
     writeBYTE((h >> 8) & 0xFF);
     writeBYTE(h & 0xFF);
-    wait_ms(1);
+    usleep(1000);
     for (int i=0; i<w*h; i++) {
         red5   = (colors[i] >> (16 + 3)) & 0x1F;              // get red on 5 bits
         green6 = (colors[i] >> (8 + 2))  & 0x3F;              // get green on 6 bits
@@ -242,8 +243,8 @@ void uLCD_4DGL :: BLIT(int x, int y, int w, int h, int *colors)     // draw a bl
         writeBYTEfast(((green6 << 5) + (blue5 >> 0)) & 0xFF);  // second part of 16 bits color
     }
     int resp=0;
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) resp = _cmd.getc();           // read response if any
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
             resp =  1;
@@ -256,7 +257,7 @@ void uLCD_4DGL :: BLIT(int x, int y, int w, int h, int *colors)     // draw a bl
             break;
     }
 #if DEBUGMODE
-    pc.printf("   Answer received : %d\n",resp);
+    printf("   Answer received : %d\n",resp);
 #endif
 
 }
@@ -282,13 +283,13 @@ int uLCD_4DGL :: read_pixel(int x, int y)   // read screen info and populate dat
     for (i = 0; i < 6; i++) {                   // send all chars to serial port
         writeBYTE(command[i]);
     }
+    
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
 
-    while (!_cmd.readable()) wait_ms(TEMPO);    // wait a bit for screen answer
-
-    while ( resp < ARRAY_SIZE(response)) {   //read ack and 16-bit color response
-        temp = _cmd.getc();
+    do {
+        temp = _read_buf;
         response[resp++] = (char)temp;
-    }
+    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
 
     color = ((response[1] << 8) + response[2]);
 

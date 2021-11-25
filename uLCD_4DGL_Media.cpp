@@ -17,8 +17,9 @@
 // You should have received a copy of the GNU General Public License
 // along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "mbed.h"
 #include "uLCD_4DGL.h"
+#include <stdio.h>
+#include <unistd.h>
 
 
 //Media Commands
@@ -30,11 +31,10 @@ int uLCD_4DGL :: media_init()
     char command[1] = "";
     command[0] = MINIT;
     writeCOMMAND(command, 1);
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) {
-        resp = _cmd.getc();           // read response
-        resp = resp << 8 + _cmd.getc();
-    }
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);             // wait for screen answer
+    resp = _read_buf;
+    read(_fd, &_read_buf, 1);
+    resp = resp << 8 + _read_buf;
     return resp;
 }
 
@@ -74,11 +74,10 @@ char uLCD_4DGL :: read_byte()
     char command[1] = "";
     command[0] = READBYTE;
     writeCOMMAND(command, 1);
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) {
-        resp = _cmd.getc();           // read response
-        resp = _cmd.getc();
-    }
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    resp = _read_buf;
+    read(_fd, &_read_buf, 1);
+    resp = _read_buf;
     return resp;
 }
 
@@ -89,11 +88,10 @@ int  uLCD_4DGL :: read_word()
     char command[1] = "";
     command[0] = READWORD;
     writeCOMMAND(command, 1);
-    while (!_cmd.readable()) wait_ms(TEMPO);              // wait for screen answer
-    if (_cmd.readable()) {
-        resp = _cmd.getc();           // read response
-        resp = resp << 8 + _cmd.getc();
-    }
+    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    resp = _read_buf;
+    read(_fd, &_read_buf, 1);
+    resp = resp << 8 + _read_buf;
     return resp;
 }
 

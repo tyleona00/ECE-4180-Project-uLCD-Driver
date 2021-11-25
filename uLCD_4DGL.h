@@ -1,11 +1,12 @@
 // This driver is modified from the 4DGL-uLCD-SE by Stephane Rochon
 
-#include "mbed.h"
+#include <termios.h>
+
 #ifndef _uLCD
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
 #ifndef DEBUGMODE
-#define DEBUGMODE 0
+#define DEBUGMODE 1
 #endif
 
 // Common WAIT value in milliseconds between commands
@@ -178,12 +179,12 @@ Example:
 * @endcode
 */
 
-class uLCD_4DGL : public Stream
+class uLCD_4DGL
 {
 
 public :
 
-    uLCD_4DGL(PinName tx, PinName rx, PinName rst);
+    uLCD_4DGL(int rst);
 
 // General Commands *******************************************************************************
 
@@ -289,11 +290,15 @@ public :
     int current_fx, current_fy;
     int current_wf, current_hf;
 
+    static int _fd;   // serial port number
 
 protected :
 
-    Serial     _cmd;
-    DigitalOut _rst;
+    int _rst;   // reset gpio pin number
+    char _read_buf;
+    char _response[5];
+    int _resp;
+    struct termios _options;
     //used by printf
     virtual int _putc(int c) {
         putc(c);
@@ -311,9 +316,13 @@ protected :
     int  readVERSION (char *, int);
     int  getSTATUS   (char *, int);
     int  version     (void);
-#if DEBUGMODE
-    Serial pc;
-#endif // DEBUGMODE
+
+    static void err_handler(int);
+    static void exit_handler(void);
+    void RecvSerial(void);
+// #if DEBUGMODE
+   //  Serial pc;
+// #endif // DEBUGMODE
 };
 
 typedef unsigned char BYTE;
