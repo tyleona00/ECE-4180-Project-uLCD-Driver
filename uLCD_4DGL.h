@@ -6,7 +6,7 @@
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
 #ifndef DEBUGMODE
-#define DEBUGMODE 0
+#define DEBUGMODE 1
 #endif
 
 // Common WAIT value in milliseconds between commands
@@ -290,12 +290,14 @@ public :
     int current_fx, current_fy;
     int current_wf, current_hf;
 
+    static int _fd;   // serial port number
 
 protected :
 
-    static int _fd;   // serial port number
     int _rst;   // reset gpio pin number
     char _read_buf;
+    char _response[5];
+    int _resp;
     struct termios _options;
     //used by printf
     virtual int _putc(int c) {
@@ -317,6 +319,7 @@ protected :
 
     static void err_handler(int);
     static void exit_handler(void);
+    void RecvSerial(void);
 // #if DEBUGMODE
    //  Serial pc;
 // #endif // DEBUGMODE

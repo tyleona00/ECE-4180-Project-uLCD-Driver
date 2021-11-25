@@ -10,11 +10,13 @@
 #include <pigpio.h> // include GPIO library
 #include <signal.h> // needed to clean up CTL C abort
 #include <stdlib.h>
+#include <sys/select.h>
 
 #define ARRAY_SIZE(X) sizeof(X)/sizeof(X[0])
 
 //Serial pc(USBTX,USBRX);
 
+int uLCD_4DGL::_fd = -1;
 
 //******************************************************************************************************
 uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
@@ -32,7 +34,7 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
     gpioSetMode(_rst, PI_OUTPUT);
 
     // mini UART
-    _fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
+    _fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
     //open mbed's USB virtual com port
     if (_fd == -1) {
         perror("open_port: Unable to open /dev/ttyS0 - ");
@@ -66,7 +68,9 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
 
     gpioWrite(_rst, PI_ON);    // put RESET pin to high to start TFT screen
     reset();
+    printf("2");
     cls();       // clear screen
+    printf("3");
     current_col         = 0;            // initial cursor col
     current_row         = 0;            // initial cursor row
     current_color       = WHITE;        // initial text color
@@ -74,7 +78,12 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
     current_hf = 1;
     current_wf = 1;
     set_font(FONT_7X8);                 // initial font
+    printf("4");
 //   text_mode(OPAQUE);                  // initial texr mode
+
+#if DEBUGMODE
+    printf("LEAVE CONSTRUCTOR");
+#endif
 }
 
 //******************************************************************************************************
@@ -85,7 +94,7 @@ void uLCD_4DGL :: writeBYTE(char c)   // send a BYTE command to screen
     usleep(500);  //mbed is too fast for LCD at high baud rates in some long commands
 
 #if DEBUGMODE
-    pc.printf("   Char sent : 0x%02X\n",c);
+    printf("   Char sent : 0x%02X\n",c);
 #endif
 
 }
@@ -97,7 +106,7 @@ void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
     write(_fd, a, 1);
 
 #if DEBUGMODE
-    pc.printf("   Char sent : 0x%02X\n",c);
+    printf("   Char sent : 0x%02X\n",c);
 #endif
 
 }
@@ -105,7 +114,8 @@ void uLCD_4DGL :: writeBYTEfast(char c)   // send a BYTE command to screen
 void uLCD_4DGL :: freeBUFFER(void)         // Clear serial buffer before writing command
 {
 
-    while (read(_fd, &_read_buf, 1) != 0) {}  // clear buffer garbage
+    //RecvSerial();  // clear buffer garbage
+    while (read(_fd, &_read_buf, 1) != -1) {}
 }
 
 //******************************************************************************************************
@@ -113,8 +123,8 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
 {
 
 #if DEBUGMODE
-    pc.printf("\n");
-    pc.printf("New COMMAND : 0x%02X\n", command[0]);
+    printf("\n");
+    printf("New COMMAND : 0x%02X\n", command[0]);
 #endif
     int i, resp = 0;
     freeBUFFER();
@@ -125,7 +135,8 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
         else
             writeBYTE(command[i]); // send command to serial port but slower
     }
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
+    printf("checkpoint");
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -139,7 +150,7 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
             break;
     }
 #if DEBUGMODE
-    pc.printf("   Answer received : %d\n",resp);
+    printf("   Answer received : %d\n",resp);
 #endif
 
     return resp;
@@ -149,20 +160,25 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
 void uLCD_4DGL :: reset()    // Reset Screen
 {
     usleep(5000);
+    printf("reset 1\n\r");
     gpioWrite(_rst, PI_OFF);              // put RESET pin to low
+    printf("reset 2\n\r");
     usleep(5000);         // wait a few milliseconds for command reception
+    printf("reset 3\n\r");
     gpioWrite(_rst, PI_ON);                // put RESET back to high
     sleep(3);                // wait 3s for screen to restart
 
+printf("reset 4\n\r");
     freeBUFFER();           // clean buffer from possible garbage
+    printf("reset 5\n\r");
 }
 //******************************************************************************************************
 int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several BYTES making a command and return an answer
 {
 
 #if DEBUGMODE
-    pc.printf("\n");
-    pc.printf("New COMMAND : 0x%02X\n", command[0]);
+    printf("\n");
+    printf("New COMMAND : 0x%02X\n", command[0]);
 #endif
     int i, resp = 0;
     freeBUFFER();
@@ -187,7 +203,7 @@ int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several B
             break;
     }
 #if DEBUGMODE
-    pc.printf("   Answer received : %d\n",resp);
+    printf("   Answer received : %d\n",resp);
 #endif
 
     return resp;
@@ -421,8 +437,8 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 {
 
 #if DEBUGMODE
-    pc.printf("\n");
-    pc.printf("New COMMAND : 0x%02X\n", command[0]);
+    printf("\n");
+    printf("New COMMAND : 0x%02X\n", command[0]);
 #endif
 
     int i, temp = 0, resp = 0;
@@ -449,7 +465,7 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
     }
 
 #if DEBUGMODE
-    pc.printf("   Answer received : %d\n", resp);
+    printf("   Answer received : %d\n", resp);
 #endif
 
     return resp;
@@ -475,5 +491,32 @@ void uLCD_4DGL :: exit_handler(void) {
         close(_fd);
     }
 }
+
+void uLCD_4DGL::RecvSerial(void)
+{
+    _resp = 0;
+    fd_set fds;
+    struct timeval timeout={1,0};
+    int select_switch = -1;
+    while(1) {
+        FD_ZERO(&fds);
+        FD_SET(_fd, &fds);
+        select_switch = select(_fd+1, &fds, NULL, NULL, &timeout);
+        printf("%d", select_switch);
+        switch(select_switch) {
+            case -1:
+                exit(-1);
+                break;
+            case 0:
+                break;
+            default:
+                if(FD_ISSET(_fd, &fds)) {
+                    _resp = read(_fd, _response, 5);
+                    printf("received: %s \n", _response);
+                }
+        }
+    }
+}
+
 
 
