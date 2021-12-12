@@ -189,7 +189,7 @@ int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several B
         else
             writeBYTE(command[i]); // send command to serial port with delay
     }
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -300,7 +300,7 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
     sleep(1);
     
     i=0;
-    while ((read(_fd, &_read_buf, 1) == 0) && (i<25000)) {
+    while ((read(_fd, &_read_buf, 1) == -1) && (i<25000)) {
         usleep(TEMPO);           // wait for screen answer - comes 100ms after change
         i++; //timeout if ack character missed by baud change
     }
@@ -329,7 +329,7 @@ int uLCD_4DGL :: readVERSION(char *command, int number)   // read screen info an
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);               // wait for screen answer
 
     do {
         temp = _read_buf;
@@ -448,12 +448,12 @@ int uLCD_4DGL :: getSTATUS(char *command, int number)   // read screen info and 
 
     for (i = 0; i < number; i++) writeBYTE(command[i]);    // send all chars to serial port
 
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);               // wait for screen answer
     
     do {
         temp = _read_buf;
         response[resp++] = (char)temp;
-    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
+    } while (read(_fd, &_read_buf, 1) != -1 && resp < ARRAY_SIZE(response));
     
     switch (resp) {
         case 4 :
@@ -489,32 +489,6 @@ void uLCD_4DGL :: exit_handler(void) {
     if (_fd != -1) {
         tcdrain(_fd);
         close(_fd);
-    }
-}
-
-void uLCD_4DGL::RecvSerial(void)
-{
-    _resp = 0;
-    fd_set fds;
-    struct timeval timeout={1,0};
-    int select_switch = -1;
-    while(1) {
-        FD_ZERO(&fds);
-        FD_SET(_fd, &fds);
-        select_switch = select(_fd+1, &fds, NULL, NULL, &timeout);
-        printf("%d", select_switch);
-        switch(select_switch) {
-            case -1:
-                exit(-1);
-                break;
-            case 0:
-                break;
-            default:
-                if(FD_ISSET(_fd, &fds)) {
-                    _resp = read(_fd, _response, 5);
-                    printf("received: %s \n", _response);
-                }
-        }
     }
 }
 
