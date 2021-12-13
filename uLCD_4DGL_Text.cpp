@@ -1,8 +1,9 @@
 //
-// uLCD_4DGL is a class to drive 4D Systems TFT touch screens
+// uLCD_4DGL is a class to drive 4D Systems LCD screens
 //
 // Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
 // Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
 //
 // uLCD_4DGL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +16,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>.
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
 #include "uLCD_4DGL.h"
 #include <stdio.h>
@@ -277,7 +278,6 @@ void uLCD_4DGL :: color(int color)     // set text color
 
 //****************************************************************************************************
 void uLCD_4DGL :: putc(char c)      // place char at current cursor position
-//used by virtual printf function _putc
 {
     char command[6] ="";
     if(c<0x20) {
@@ -349,6 +349,7 @@ void uLCD_4DGL :: puts(char *s)     // place string at current cursor position
         current_row %= max_row;
     }
     */
+
     while (*s)
     {
         putc(*s);
@@ -360,48 +361,10 @@ void uLCD_4DGL :: puts(char *s)     // place string at current cursor position
 //****************************************************************************************************
 void uLCD_4DGL :: lcd_printf(char* format, ...)
 {
-    printf("1111111");
     va_list ap;
-    printf("2222222");
     va_start(ap, format);
-    printf("3333333");
     char s[100];
-    printf("%d\n", vsnprintf(s, 100, format, ap));
-    printf("4444444");
+    vsnprintf(s, 100, format, ap);
     va_end(ap);
     puts(s);
-    printf("5555555");
-    /*
-    while (*s)
-    {
-        printf("%c", *s);
-        s++;
-    }
-    * */
-    
-    // free(s);
 }
-
-/*
-//****************************************************************************************************
-int vprinf(char* format, lcd_va_list ap)
-{
-    char *c = format;
-    
-    while(1)
-    {
-        if (*c != '%')
-        {
-            if (*c == '\0')
-            {
-                putc(*c);
-                break;
-            }
-            putc(*c);
-            c++;
-            continue;
-        }
-        
-        switch(*(
-*/
-    

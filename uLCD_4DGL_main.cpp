@@ -1,8 +1,25 @@
-// This driver is modified from the 4DGL-uLCD-SE library by Stephane Rochon
+//
+// uLCD_4DGL is a class to drive 4D Systems LCD screens
+//
+// Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
+// Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
+//
+// uLCD_4DGL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// uLCD_4DGL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
 #include "uLCD_4DGL.h"
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -10,7 +27,6 @@
 #include <pigpio.h> // include GPIO library
 #include <signal.h> // needed to clean up CTL C abort
 #include <stdlib.h>
-#include <sys/select.h>
 
 #define ARRAY_SIZE(X) sizeof(X)/sizeof(X[0])
 
@@ -68,9 +84,7 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
 
     gpioWrite(_rst, PI_ON);    // put RESET pin to high to start TFT screen
     reset();
-    printf("2");
     cls();       // clear screen
-    printf("3");
     current_col         = 0;            // initial cursor col
     current_row         = 0;            // initial cursor row
     current_color       = WHITE;        // initial text color
@@ -78,12 +92,7 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
     current_hf = 1;
     current_wf = 1;
     set_font(FONT_7X8);                 // initial font
-    printf("4");
 //   text_mode(OPAQUE);                  // initial texr mode
-
-#if DEBUGMODE
-    printf("LEAVE CONSTRUCTOR");
-#endif
 }
 
 //******************************************************************************************************
@@ -136,7 +145,6 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
             writeBYTE(command[i]); // send command to serial port but slower
     }
     while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
-    printf("checkpoint");
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -160,17 +168,13 @@ int uLCD_4DGL :: writeCOMMAND(char *command, int number)   // send several BYTES
 void uLCD_4DGL :: reset()    // Reset Screen
 {
     usleep(5000);
-    printf("reset 1\n\r");
     gpioWrite(_rst, PI_OFF);              // put RESET pin to low
-    printf("reset 2\n\r");
     usleep(5000);         // wait a few milliseconds for command reception
-    printf("reset 3\n\r");
     gpioWrite(_rst, PI_ON);                // put RESET back to high
     sleep(3);                // wait 3s for screen to restart
 
-printf("reset 4\n\r");
     freeBUFFER();           // clean buffer from possible garbage
-    printf("reset 5\n\r");
+
 }
 //******************************************************************************************************
 int uLCD_4DGL :: writeCOMMANDnull(char *command, int number)   // send several BYTES making a command and return an answer
@@ -334,11 +338,11 @@ int uLCD_4DGL :: readVERSION(char *command, int number)   // read screen info an
     do {
         temp = _read_buf;
         response[resp++] = (char)temp;
-    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
+    } while (read(_fd, &_read_buf, 1) != -1 && resp < ARRAY_SIZE(response));
 
     switch (resp) {
         case 2 :                                           // if OK populate data and return 1
-            revision  = response[0]<<8 + response[1];
+            revision  = response[0] << 8 + response[1];
             resp      = 1;
             break;
         default :
