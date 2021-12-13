@@ -9,18 +9,17 @@
 
 int main() {
 
-	uLCD_4DGL uLCD(18);
-	
-	// demo hello world
-	uLCD.cls();
-	uLCD.text_height(2);
-	uLCD.text_width(2);
-	uLCD.color(GREEN);
-	uLCD.lcd_printf("Helloworld");
-	sleep(2);
-	
-	
-	// demo graphics commands
+    uLCD_4DGL uLCD(18);
+
+    // demo hello world
+    uLCD.cls();
+    uLCD.text_height(2);
+    uLCD.text_width(2);
+    uLCD.color(GREEN);
+    uLCD.lcd_printf("Helloworld");
+    sleep(2);
+
+    // demo graphics commands
     uLCD.background_color(BLACK);
     uLCD.cls();
     uLCD.background_color(DGREY);
