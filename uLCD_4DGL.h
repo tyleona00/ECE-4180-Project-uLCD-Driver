@@ -1,4 +1,22 @@
-// This driver is modified from the 4DGL-uLCD-SE by Stephane Rochon
+//
+// uLCD_4DGL is a class to drive 4D Systems LCD screens
+//
+// Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
+// Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
+//
+// uLCD_4DGL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// uLCD_4DGL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
 #include <termios.h>
 
@@ -6,7 +24,7 @@
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
 #ifndef DEBUGMODE
-#define DEBUGMODE 1
+#define DEBUGMODE 0
 #endif
 
 // Common WAIT value in milliseconds between commands
@@ -259,7 +277,6 @@ public :
     void puts(char *);
     
     void lcd_printf(char*, ...);
-    //void lcd_vprintf(char* format, lcd_va_list ap);
 
 //Media Commands
     int media_init();
@@ -299,9 +316,6 @@ protected :
 
     int _rst;   // reset gpio pin number
     char _read_buf;
-    char _response[5];
-    int _resp;
-    struct termios _options;
 
 
     void freeBUFFER  (void);

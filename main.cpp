@@ -6,20 +6,23 @@
 #include <termios.h>
 #include <cstdlib>
 
+uLCD_4DGL uLCD(18);
 
 int main() {
 
-    uLCD_4DGL uLCD(18);
-
-    // demo hello world
-    uLCD.cls();
-    uLCD.text_height(2);
-    uLCD.text_width(2);
-    uLCD.color(GREEN);
-    uLCD.lcd_printf("Helloworld");
-    sleep(2);
-
-    // demo graphics commands
+	// change baud rate
+	uLCD.baudrate(115200);
+	
+	// demo hello world
+	uLCD.cls();
+	uLCD.text_height(2);
+	uLCD.text_width(2);
+	uLCD.color(GREEN);
+	uLCD.lcd_printf("Helloworld");
+	sleep(2);
+	
+	
+	// demo graphics commands
     uLCD.background_color(BLACK);
     uLCD.cls();
     uLCD.background_color(DGREY);

@@ -63,6 +63,7 @@ uLCD_4DGL :: uLCD_4DGL(int rst) : _rst(rst)
 
     fcntl(_fd, F_SETFL, FNDELAY);   //Turn off blocking for reads
     //Linux Raw serial setup options
+    struct termios _options;
     tcgetattr(_fd, &_options);   //Get current serial settings in structure
     cfsetspeed(&_options, B9600);   //Change a only few
     _options.c_cflag &= ~CSTOPB;
@@ -283,6 +284,12 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
             newbaud = BAUD_38400;
             newspeed = B38400;
             break;
+        case 57600 :
+            newbaud = BAUD_57600;
+            newspeed = B57600;
+        case 115200 :
+            newbaud = BAUD_115200;
+            newspeed = B115200;
         default   :
             newbaud = BAUD_9600;
             newspeed = B9600;
@@ -298,6 +305,7 @@ void uLCD_4DGL :: baudrate(int speed)    // set screen baud rate
     for (i = 0; i <3; i++) writeBYTEfast(command[i]);      // send command to serial port
     for (i = 0; i<10; i++) usleep(1000); 
     //dont change baud until all characters get sent out
+    struct termios _options;
     tcgetattr(_fd, &_options);   //Get current serial settings in structure
     cfsetspeed(&_options, newspeed);
     tcsetattr(_fd,TCSANOW, &_options);    //Set serial to new settings
