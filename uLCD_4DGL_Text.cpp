@@ -1,8 +1,9 @@
 //
-// uLCD_4DGL is a class to drive 4D Systems TFT touch screens
+// uLCD_4DGL is a class to drive 4D Systems LCD screens
 //
 // Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
 // Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
 //
 // uLCD_4DGL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,10 +16,17 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>.
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
 #include "uLCD_4DGL.h"
+#include <stdio.h>
 #include <cstring>
+#include <cstdlib>
+#include <stdarg.h>
+
+#define lcd_INTSIZEOF(n) ((sizeof(n) + sizeof(int) -1 ) & ~(sizeof(int) -1))
+#define lcd_va_start(ap, v) (ap = (lcd_va_list)&v + lcd_INTSIZEOF(v))
+#define lcd_va_end(ap) (ap = (lcd_va_list)0)
 
 //****************************************************************************************************
 void uLCD_4DGL :: set_font_size(char width, char height)     // set font size
@@ -270,7 +278,6 @@ void uLCD_4DGL :: color(int color)     // set text color
 
 //****************************************************************************************************
 void uLCD_4DGL :: putc(char c)      // place char at current cursor position
-//used by virtual printf function _putc
 {
     char command[6] ="";
     if(c<0x20) {
@@ -329,6 +336,7 @@ void uLCD_4DGL :: putc(char c)      // place char at current cursor position
 void uLCD_4DGL :: puts(char *s)     // place string at current cursor position
 {
 
+    /*
     text_string(s, current_col, current_row, current_font, current_color);
 
     current_col += strlen(s);
@@ -340,4 +348,23 @@ void uLCD_4DGL :: puts(char *s)     // place string at current cursor position
     if (current_row >= max_row) {
         current_row %= max_row;
     }
+    */
+
+    while (*s)
+    {
+        putc(*s);
+        s++;
+    }
+}
+
+
+//****************************************************************************************************
+void uLCD_4DGL :: lcd_printf(char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    char s[100];
+    vsnprintf(s, 100, format, ap);
+    va_end(ap);
+    puts(s);
 }

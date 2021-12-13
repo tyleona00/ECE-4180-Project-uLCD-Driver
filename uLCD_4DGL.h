@@ -257,6 +257,9 @@ public :
     void color(int);
     void putc(char);
     void puts(char *);
+    
+    void lcd_printf(char*, ...);
+    //void lcd_vprintf(char* format, lcd_va_list ap);
 
 //Media Commands
     int media_init();
@@ -299,14 +302,7 @@ protected :
     char _response[5];
     int _resp;
     struct termios _options;
-    //used by printf
-    virtual int _putc(int c) {
-        putc(c);
-        return 0;
-    };
-    virtual int _getc() {
-        return -1;
-    }
+
 
     void freeBUFFER  (void);
     void writeBYTE   (char);
@@ -319,13 +315,14 @@ protected :
 
     static void err_handler(int);
     static void exit_handler(void);
-    void RecvSerial(void);
+
 // #if DEBUGMODE
    //  Serial pc;
 // #endif // DEBUGMODE
 };
 
 typedef unsigned char BYTE;
+typedef char* lcd_va_list;
 #endif
 
 

@@ -3,6 +3,7 @@
 //
 // Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
 // Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
 //
 // uLCD_4DGL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +16,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>.
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
 #include "uLCD_4DGL.h"
 #include <stdio.h>
@@ -31,7 +32,7 @@ int uLCD_4DGL :: media_init()
     char command[1] = "";
     command[0] = MINIT;
     writeCOMMAND(command, 1);
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);             // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);             // wait for screen answer
     resp = _read_buf;
     read(_fd, &_read_buf, 1);
     resp = resp << 8 + _read_buf;
@@ -74,7 +75,7 @@ char uLCD_4DGL :: read_byte()
     char command[1] = "";
     command[0] = READBYTE;
     writeCOMMAND(command, 1);
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;
     read(_fd, &_read_buf, 1);
     resp = _read_buf;
@@ -88,7 +89,7 @@ int  uLCD_4DGL :: read_word()
     char command[1] = "";
     command[0] = READWORD;
     writeCOMMAND(command, 1);
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;
     read(_fd, &_read_buf, 1);
     resp = resp << 8 + _read_buf;

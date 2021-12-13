@@ -3,6 +3,7 @@
 //
 // Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
 // Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
 //
 // uLCD_4DGL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -243,7 +244,7 @@ void uLCD_4DGL :: BLIT(int x, int y, int w, int h, int *colors)     // draw a bl
         writeBYTEfast(((green6 << 5) + (blue5 >> 0)) & 0xFF);  // second part of 16 bits color
     }
     int resp=0;
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);              // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);              // wait for screen answer
     resp = _read_buf;           // read response if any
     switch (resp) {
         case ACK :                                     // if OK return   1
@@ -284,12 +285,12 @@ int uLCD_4DGL :: read_pixel(int x, int y)   // read screen info and populate dat
         writeBYTE(command[i]);
     }
     
-    while (read(_fd, &_read_buf, 1) == 0) usleep(TEMPO);               // wait for screen answer
+    while (read(_fd, &_read_buf, 1) == -1) usleep(TEMPO);               // wait for screen answer
 
     do {
         temp = _read_buf;
         response[resp++] = (char)temp;
-    } while (read(_fd, &_read_buf, 1) != 0 && resp < ARRAY_SIZE(response));
+    } while (read(_fd, &_read_buf, 1) != -1 && resp < ARRAY_SIZE(response));
 
     color = ((response[1] << 8) + response[2]);
 
