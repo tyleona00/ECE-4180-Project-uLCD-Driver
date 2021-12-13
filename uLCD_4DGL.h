@@ -1,6 +1,25 @@
-// This driver is modified from the 4DGL-uLCD-SE by Stephane Rochon
+//
+// uLCD_4DGL is a class to drive 4D Systems LCD screens
+//
+// Copyright (C) <2010> Stephane ROCHON <stephane.rochon at free.fr>
+// Modifed for Goldelox processor <2013> Jim Hamblen
+// Modified for Raspberry Pi Zero W <2021> Yue Teng, Huang Yao
+//
+// uLCD_4DGL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// uLCD_4DGL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with uLCD_4DGL.  If not, see <http://www.gnu.org/licenses/>
 
-#include "mbed.h"
+#include <termios.h>
+
 #ifndef _uLCD
 #define _uLCD 0
 // Debug Verbose off - SGE commands echoed to USB serial for debugmode=1
@@ -178,12 +197,12 @@ Example:
 * @endcode
 */
 
-class uLCD_4DGL : public Stream
+class uLCD_4DGL
 {
 
 public :
 
-    uLCD_4DGL(PinName tx, PinName rx, PinName rst);
+    uLCD_4DGL(int rst);
 
 // General Commands *******************************************************************************
 
@@ -256,6 +275,8 @@ public :
     void color(int);
     void putc(char);
     void puts(char *);
+    
+    void lcd_printf(char*, ...);
 
 //Media Commands
     int media_init();
@@ -289,19 +310,13 @@ public :
     int current_fx, current_fy;
     int current_wf, current_hf;
 
+    static int _fd;   // serial port number
 
 protected :
 
-    Serial     _cmd;
-    DigitalOut _rst;
-    //used by printf
-    virtual int _putc(int c) {
-        putc(c);
-        return 0;
-    };
-    virtual int _getc() {
-        return -1;
-    }
+    int _rst;   // reset gpio pin number
+    char _read_buf;
+
 
     void freeBUFFER  (void);
     void writeBYTE   (char);
@@ -311,12 +326,17 @@ protected :
     int  readVERSION (char *, int);
     int  getSTATUS   (char *, int);
     int  version     (void);
-#if DEBUGMODE
-    Serial pc;
-#endif // DEBUGMODE
+
+    static void err_handler(int);
+    static void exit_handler(void);
+
+// #if DEBUGMODE
+   //  Serial pc;
+// #endif // DEBUGMODE
 };
 
 typedef unsigned char BYTE;
+typedef char* lcd_va_list;
 #endif
 
 
