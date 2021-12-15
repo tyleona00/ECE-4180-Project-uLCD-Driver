@@ -1,2 +1,2 @@
 # ECE-4180-Project-uLCD-Driver
-uLCD-144-G2 driver for Raspberry Pi Zero W
+Please refer to the wiki page for details on this project.
