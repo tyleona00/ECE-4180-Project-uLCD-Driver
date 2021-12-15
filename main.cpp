@@ -1,28 +1,23 @@
 #include "uLCD_4DGL.h"
-#include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <termios.h>
-#include <cstdlib>
 
 uLCD_4DGL uLCD(18);
 
 int main() {
 
-	// change baud rate
-	uLCD.baudrate(115200);
-	
-	// demo hello world
-	uLCD.cls();
-	uLCD.text_height(2);
-	uLCD.text_width(2);
-	uLCD.color(GREEN);
-	uLCD.lcd_printf("Helloworld");
-	sleep(2);
-	
-	
-	// demo graphics commands
+    // change baud rate
+    uLCD.baudrate(115200);
+
+    // demo hello world
+    uLCD.cls();
+    uLCD.text_height(2);
+    uLCD.text_width(2);
+    uLCD.color(GREEN);
+    uLCD.lcd_printf("Helloworld");
+    sleep(2);
+    
+    
+    // demo graphics commands
     uLCD.background_color(BLACK);
     uLCD.cls();
     uLCD.background_color(DGREY);
@@ -48,6 +43,4 @@ int main() {
     uLCD.media_init();
     uLCD.set_sector_address(0x0000, 0x0000);
     uLCD.display_image(0, 0);
-
-
 }
