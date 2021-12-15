@@ -1,5 +1,4 @@
 #include "uLCD_4DGL.h"
-#include <unistd.h>
 
 uLCD_4DGL uLCD(18);
 
